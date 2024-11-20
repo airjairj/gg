@@ -37,7 +37,7 @@ function Player(showDebug)
                 table.insert(self.move.trail, {x = self.x, y = self.y})
             end
 
-            if #self.move.trail > self.max_trail_length then
+            while #self.move.trail > self.max_trail_length do
                 table.remove(self.move.trail, 1)
             end
 
@@ -116,8 +116,8 @@ function Player(showDebug)
             self.accelerating = true
             elseif love.keyboard.isDown("s") or love.keyboard.isDown("down") then
             self.accelerating = false
-            self.move.x = self.move.x - friction * self.move.x/FPS
-            self.move.y = self.move.y - friction * self.move.y/FPS
+            self.move.x = self.move.x - 2*friction * self.move.x/FPS
+            self.move.y = self.move.y - 2*friction * self.move.y/FPS
             else
             self.accelerating = false
             end

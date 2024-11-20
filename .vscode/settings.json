@@ -8,6 +8,7 @@
         "duplicate-set-field",
         "lowercase-global",
         "undefined-global",
-        "cast-local-type"
+        "cast-local-type",
+        "undefined-field"
     ]
 }
