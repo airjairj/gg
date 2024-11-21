@@ -1,6 +1,9 @@
-function Asteroid(showDebug)
-    local MIN_SIZE = 64  -- Dimensione minima
-    local MAX_SIZE = 128 -- Dimensione massima
+function Asteroid(showDebug, spawnSmall, parent_pos_x, parent_pos_y)
+    local MIN_MIN_SIZE = 64  -- Dimensione minima
+    local MAX_MIN_SIZE = 96  -- Dimensione minima
+
+    local MIN_MAX_SIZE = 97 -- Dimensione minima
+    local MAX_MAX_SIZE = 128 -- Dimensione massima
     local SPEED = 150
 
     debug = showDebug or false
@@ -11,39 +14,84 @@ function Asteroid(showDebug)
         radius = 0, -- Raggio basato sulla dimensione
         collisionRadius = 0, -- Raggio di collisione calcolato sui vertici
         angle = 0,
+        isBig = false,
         move = {
             x = 0,
             y = 0,
+            trail = {}
         },
         vertices = {},
         timer = math.random(8, 12),
 
         initialize = function(self)
             -- Genera una dimensione casuale
-            local size = math.random(MIN_SIZE, MAX_SIZE)
-            self.radius = size / 2
+            if spawnSmall then
+                local size = math.random(MIN_MIN_SIZE, MAX_MIN_SIZE)
+                self.isBig = false
+                self.radius = size / 2
+            else
+                local size = math.random(MIN_MIN_SIZE, MAX_MAX_SIZE)
+                self.isBig = size > MIN_MAX_SIZE
+                self.radius = size / 2
+            end
 
             -- Posizione iniziale fuori dallo schermo
             local screenWidth = love.graphics.getWidth()
             local screenHeight = love.graphics.getHeight()
             local side = math.random(1, 4) -- 1 = sopra, 2 = sotto, 3 = sinistra, 4 = destra
 
-            if side == 1 then -- Sopra lo schermo
-                self.x = math.random(0, screenWidth)
-                self.y = -self.radius
+            if spawnSmall then
+                self.x = parent_pos_x
+                self.y = parent_pos_y
+            else
+                if side == 1 then -- Sopra lo schermo
+                    self.x = math.random(0, screenWidth)
+                    self.y = -self.radius
+                elseif side == 2 then -- Sotto lo schermo
+                    self.x = math.random(0, screenWidth)
+                    self.y = screenHeight + self.radius
+                elseif side == 3 then -- Sinistra dello schermo
+                    self.x = -self.radius
+                    self.y = math.random(0, screenHeight)
+                elseif side == 4 then -- Destra dello schermo
+                    self.x = screenWidth + self.radius
+                    self.y = math.random(0, screenHeight)
+                end
+            end
+
+            if spawnSmall then
+                self.angle = math.random() * 2 * math.pi
+            else
                 self.angle = math.atan((screenHeight / 2 - self.y) / (screenWidth / 2 - self.x))
-            elseif side == 2 then -- Sotto lo schermo
-                self.x = math.random(0, screenWidth)
-                self.y = screenHeight + self.radius
-                self.angle = math.atan((screenHeight / 2 - self.y) / (screenWidth / 2 - self.x))
-            elseif side == 3 then -- Sinistra dello schermo
-                self.x = -self.radius
-                self.y = math.random(0, screenHeight)
-                self.angle = math.atan((screenHeight / 2 - self.y) / (screenWidth / 2))
-            elseif side == 4 then -- Destra dello schermo
-                self.x = screenWidth + self.radius
-                self.y = math.random(0, screenHeight)
-                self.angle = math.atan((screenHeight / 2 - self.y) / (screenWidth / 2))
+            end
+        end,
+
+        drawTrail = function (self, trailColor, trailThickness, shape)
+            trailColor = trailColor or {1, 1, 1}
+            trailThickness = trailThickness or self.radius / 4
+
+            local lastPoint = self.move.trail[#self.move.trail]
+            if lastPoint then
+                local distance = math.sqrt((self.x - lastPoint.x)^2 + (self.y - lastPoint.y)^2)
+                local steps = math.ceil(distance / (trailThickness * 2))
+                for i = 1, steps do
+                    local t = i / steps
+                    local interpolatedX = lastPoint.x + t * (self.x - lastPoint.x)
+                    local interpolatedY = lastPoint.y + t * (self.y - lastPoint.y)
+                    table.insert(self.move.trail, {x = interpolatedX, y = interpolatedY})
+                end
+            else
+                table.insert(self.move.trail, {x = self.x, y = self.y})
+            end
+
+            while #self.move.trail > 20 do
+                table.remove(self.move.trail, 1)
+            end
+
+            for i, point in ipairs(self.move.trail) do
+                local opacity = trailColor[4] * 2 / #self.move.trail
+                love.graphics.setColor(trailColor[1], trailColor[2], trailColor[3], opacity)
+                love.graphics.circle("fill", point.x, point.y, trailThickness)
             end
         end,
 
@@ -54,7 +102,12 @@ function Asteroid(showDebug)
                 table.insert(transformedVertices, self.y + vertex.y) -- Applica traslazione Y
             end
 
-            love.graphics.setColor(1, 0, 0)
+            self:drawTrail( {1, 0.1, 0, 0.3}, self.collisionRadius, shape)
+
+            love.graphics.setColor(1, 0.1, 0, 0.3)
+            love.graphics.polygon("fill", transformedVertices)
+
+            love.graphics.setColor(1, 0, 0, 1)
             love.graphics.polygon("line", transformedVertices)
 
             if debug then
@@ -118,39 +171,39 @@ function Asteroid(showDebug)
         end,
 
         checkCollision = function(self, player)
-            -- Calculate distance between asteroid and player centers
+            -- Calcola la distanza tra il centro dell'asteroide e il giocatore
             local dx = self.x - player.x
             local dy = self.y - player.y
             local distance = math.sqrt(dx * dx + dy * dy)
-            
-            -- If distance is less than sum of radii, collision occurred
+
+            -- Verifica collisione
             if distance < (self.collisionRadius + player.radius) then
-                -- Calculate collision normal
+                -- Normale di collisione
                 local nx = dx / distance
                 local ny = dy / distance
-                
-                -- Push player away from asteroid
+
+                -- Separazione
                 local separation = self.collisionRadius + player.radius
                 player.x = self.x - separation * nx
                 player.y = self.y - separation * ny
-                
-                -- Calculate reflection vector with dampening
+
+                -- Riflettività del movimento
                 local dot = player.move.x * nx + player.move.y * ny
-                local bounce = 0.8 -- Bounce factor (0.8 = 80% of original velocity)
+                local bounce = 0.8 -- Rimbalzo
                 player.move.x = (player.move.x - 2 * dot * nx) * bounce
                 player.move.y = (player.move.y - 2 * dot * ny) * bounce
-            
-                -- Add to trail
+
+                -- Trail
+                player.move.trail = player.move.trail or {}
                 table.insert(player.move.trail, {x = player.x, y = player.y})
-                if #player.move.trail > player.max_trail_length then
+                if #player.move.trail > (player.max_trail_length or 10) then
                     table.remove(player.move.trail, 1)
                 end
-                
+
                 return true
             end
             return false
         end,
-
     }
 
     asteroid:initialize()
@@ -160,4 +213,3 @@ function Asteroid(showDebug)
 end
 
 return Asteroid
-

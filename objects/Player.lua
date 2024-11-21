@@ -134,8 +134,7 @@ function Player(showDebug)
 
             self.x = self.x + self.move.x
             self.y = self.y + self.move.y
-
-        end
+        end,
     }
 end
 
