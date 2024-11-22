@@ -6,6 +6,7 @@ function Bullet(player)
         y = player.y,
         radius = 3,
         angle = player.angle,
+        timer = 5,
         move = {
             x = SPEED * math.cos(player.angle),
             y = SPEED * math.sin(player.angle),

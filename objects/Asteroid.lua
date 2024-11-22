@@ -66,43 +66,12 @@ function Asteroid(showDebug, spawnSmall, parent_pos_x, parent_pos_y)
             end
         end,
 
-        drawTrail = function (self, trailColor, trailThickness, shape)
-            trailColor = trailColor or {1, 1, 1}
-            trailThickness = trailThickness or self.radius / 4
-
-            local lastPoint = self.move.trail[#self.move.trail]
-            if lastPoint then
-                local distance = math.sqrt((self.x - lastPoint.x)^2 + (self.y - lastPoint.y)^2)
-                local steps = math.ceil(distance / (trailThickness * 2))
-                for i = 1, steps do
-                    local t = i / steps
-                    local interpolatedX = lastPoint.x + t * (self.x - lastPoint.x)
-                    local interpolatedY = lastPoint.y + t * (self.y - lastPoint.y)
-                    table.insert(self.move.trail, {x = interpolatedX, y = interpolatedY})
-                end
-            else
-                table.insert(self.move.trail, {x = self.x, y = self.y})
-            end
-
-            while #self.move.trail > 20 do
-                table.remove(self.move.trail, 1)
-            end
-
-            for i, point in ipairs(self.move.trail) do
-                local opacity = trailColor[4] * 2 / #self.move.trail
-                love.graphics.setColor(trailColor[1], trailColor[2], trailColor[3], opacity)
-                love.graphics.circle("fill", point.x, point.y, trailThickness)
-            end
-        end,
-
         draw = function(self)
             local transformedVertices = {}
             for _, vertex in ipairs(self.vertices) do
                 table.insert(transformedVertices, self.x + vertex.x) -- Applica traslazione X
                 table.insert(transformedVertices, self.y + vertex.y) -- Applica traslazione Y
             end
-
-            self:drawTrail( {1, 0.1, 0, 0.3}, self.collisionRadius, shape)
 
             love.graphics.setColor(1, 0.1, 0, 0.3)
             love.graphics.polygon("fill", transformedVertices)
@@ -111,11 +80,7 @@ function Asteroid(showDebug, spawnSmall, parent_pos_x, parent_pos_y)
             love.graphics.polygon("line", transformedVertices)
 
             if debug then
-                -- Hitbox originale
-                love.graphics.setColor(0, 1, 0, 0.3)
-                love.graphics.circle("line", self.x, self.y, self.radius)
-
-                -- Hitbox più precisa
+                -- Hitbox
                 love.graphics.setColor(0, 0, 1, 0.5)
                 love.graphics.circle("line", self.x, self.y, self.collisionRadius)
             end

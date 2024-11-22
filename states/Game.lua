@@ -2,7 +2,7 @@ require "../components/Text"
 function Game()
     return {
         state = {
-            menu = false,
+            menu = true,
             paused = false,
             gameover = false,
             playing = false,
